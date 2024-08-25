@@ -105,7 +105,7 @@ for detection in result: #as long as there's something in the result- so there's
     if len(speech_bubbles) < 1:
         speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
     else:
-        c = nearest_bubble(speech_bubbles, phr3ase)
+        c = nearest_bubble(speech_bubbles, phrase)
         #If the word isn't in the bubble, create a new bubble
         if c == -1:
             speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
