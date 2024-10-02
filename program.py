@@ -1,9 +1,6 @@
 import easyocr
 import pyttsx3
-import cv2 #allows for showing the image
-from matplotlib import pyplot as plt 
-import numpy as np
-
+import screenreader
 class Bubble:
     def __init__(self, min_x, min_y, max_x, max_y):
         self.min_x = min_x
@@ -75,7 +72,6 @@ class Bubble:
 # bubbles = [startx, start_y, endx, end_y]: List of all exsiting speech bubbles
 # phrase = [startx, start_y, endx, end_y]: Phrase or phrase being checked
 def nearest_bubble(bubbles, phrase):
-   # print("\nNEW")
     c = 0
     for cords in bubbles:
         if cords.x_spaced(phrase[0]) and cords.y_spaced(phrase[1]):
@@ -83,7 +79,7 @@ def nearest_bubble(bubbles, phrase):
         c+=1
     return -1
  
-
+#im = screenreader.get_image()
 image_path = "percy.jpg"
 reader = easyocr.Reader(['en'], gpu = False) #en = english, there's no gpu (i checked :/)
 result = reader.readtext(image_path)
@@ -121,6 +117,6 @@ for detection in result: #as long as there's something in the result- so there's
 engine = pyttsx3.init()
 
 for i in speech_bubbles:
-    engine.say(i.show_bubble())
-    print(i.show_bubble())
-    engine.runAndWait()
+     engine.say(i.show_bubble())
+     print(i.show_bubble())
+     engine.runAndWait()
