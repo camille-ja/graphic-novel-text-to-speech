@@ -1,10 +1,26 @@
-#https://pyautogui.readthedocs.io/en/latest/quickstart.html
+import sys
+from PyQt5.QtWidgets import(
+    QApplication,
+    QMainWindow,
+    QLabel,
+    QVBoxLayout,
+    QFrame,
+    QPushButton,
+    QFileDialog,
+    QWidget
+)
+
+from PyQt5.QtCore import Qt
+
+
 import pyautogui
 from PyQt5.QtWidgets import QWidget, QApplication, QRubberBand
 from PyQt5.QtGui import QCursor, QMouseEvent
 from PyQt5.QtCore import Qt, QPoint, QRect
 import time
 
+xCord = [] 
+yCord = []
 #creates a big window that's transparent so it looks like user is drawing on their screen
 class Capture(QWidget):
     def __init__(self, main_window):
@@ -38,8 +54,6 @@ class Capture(QWidget):
             self.rubber_band.setGeometry(QRect(self.origin, event.pos()).normalized()) #Creates a rectangle using top left corner & changing variable
             self.rubber_band.show()
 
-    
-
     def mouseMoveEvent(self, event:QMouseEvent | None) -> None:
         if not self.origin.isNull():
             self.rubber_band.setGeometry(QRect(self.origin,event.pos()).normalized()) #Expands the rectangle once top left corner is defined
@@ -60,27 +74,79 @@ class Capture(QWidget):
 
             self.main.label.setPixmap(self.imgmap)
             self.main.show()
-
+            print("cords:", rect.x(), rect.y())
+            xCord.insert(0, rect.x())
+            xCord.insert(1, rect.width() - rect.x())
+            yCord.insert(0, rect.y())
+            yCord.insert(1, rect.height() - rect.y())
             self.close()
 
 
 
+#Main class for screen region selector
+class ScreenRegionSelector(QMainWindow):
+    
+    def __init__(self,):
+        super().__init__(None)
 
-def get_image():
-    pyautogui.confirm('Move to top left and press enter')
-    print(pyautogui.size())
-    position = pyautogui.position()
-    min_x = position.x
-    min_y = position.y
-    print(min_x,min_y)
-    pyautogui.confirm('Move to bottom right and press enter')
-    position = pyautogui.position()
-    max_x = position.x
-    max_y = position.y
-    print(max_x, max_y)
-    pyautogui.alert('The cordinates of your screen: ' + str(min_x) + ", " + str(min_y) + ", " + str(max_x) + ", " + str(max_y))
-    pyautogui.sleep(5)
-    return pyautogui.screenshot( 'my_image.png', region=(min_x,min_y,max_x,max_y))
+        self.m_width = 400
+        self.m_height = 500
+
+        self.setMinimumSize(self.m_width, self.m_height)
+
+        frame = QFrame()
+        frame.setContentsMargins(0, 0, 0, 0)
+        lay = QVBoxLayout(frame)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.setContentsMargins(5, 5, 5, 5)
+
+        self.label = QLabel()
+        self.btn_capture = QPushButton("Capture")
+        self.btn_capture.clicked.connect(self.capture)
+
+        self.btn_save = QPushButton("Save")
+        self.btn_save.clicked.connect(self.save)
+        self.btn_save.setVisible(False)
+
+        lay.addWidget(self.label)
+        lay.addWidget(self.btn_capture)
+        lay.addWidget(self.btn_save)
+
+        self.setCentralWidget(frame)
+
+    def capture(self):
+        self.capturer = Capture(self) #grabs the mouse movement from capture class
+        self.capturer.show()
+        self.btn_save.setVisible(True)
+
+    def save(self):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Image", "", "Image files (*.png *.jpg *.bmp)")
+        if file_name:
+            self.capturer.imgmap.save(file_name)
 
 
+
+app = QApplication(sys.argv)
+app.setStyleSheet("""
+Qframe {
+background-color: rgb(0,0,0);
+}
+QPushButton {
+border-radius: 5px;
+background-color: rgb(60,90,255)  
+padding: 10px;
+color: white;
+font-weight: bold;
+font-family: Arial;
+font-size: 12px;  
+}
+QPushButton::hover{
+background-color: rgb(60,20,255)              
+}""")
+
+selector = ScreenRegionSelector()
+selector.show()
+app.exit(app.exec_())    
+print("->x",xCord)
+print("->y",yCord)
 

@@ -1,6 +1,5 @@
 import easyocr
 import pyttsx3
-import screenreader
 class Bubble:
     def __init__(self, min_x, min_y, max_x, max_y):
         self.min_x = min_x
@@ -80,7 +79,7 @@ def nearest_bubble(bubbles, phrase):
     return -1
  
 #im = screenreader.get_image()
-image_path = "percy.jpg"
+image_path = "maus.png"
 reader = easyocr.Reader(['en'], gpu = False) #en = english, there's no gpu (i checked :/)
 result = reader.readtext(image_path)
        
