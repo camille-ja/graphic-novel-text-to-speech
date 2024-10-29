@@ -47,7 +47,7 @@ print(z)
 
 #Logical Opperators
 price = 25
-print(price > 10 and price < 30)
+print(price > 10 or price < 30)
 price = 11
 print(price < 10 or price > 30)
 print(not price < 10)

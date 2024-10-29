@@ -79,43 +79,48 @@ def nearest_bubble(bubbles, phrase):
     return -1
  
 #im = screenreader.get_image()
-image_path = "maus.png"
-reader = easyocr.Reader(['en'], gpu = False) #en = english, there's no gpu (i checked :/)
-result = reader.readtext(image_path)
-       
-#([X1,Y1],[xn,y1],[Xn,Yn],[x1,yn], text, confidence)
-#print(result) #will print the text with array location and confidence values
-#img = cv2.imread(image_path)
-speech_bubbles = []
-c = 0
-for detection in result: #as long as there's something in the result- so there's text that's being read
-    #grab x's and y's
-    startx = detection[0][0][0]
-    start_y = detection[0][0][1]
-    endx = detection[0][1][0]
-    end_y = detection[0][2][1]    
-    phrase = [startx, start_y, endx, end_y]
-    w = detection[1]
-    #If there's no bubbles, create a new one
-    if len(speech_bubbles) < 1:
-        speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
-    else:
-        c = nearest_bubble(speech_bubbles, phrase)
-        #If the word isn't in the bubble, create a new bubble
-        if c == -1:
-            speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
-        else:
-            #Expand the bubble to include new max values
-            if not speech_bubbles[c].y_inrange(end_y):
-                speech_bubbles[c].new_max_y(end_y)
-            if not speech_bubbles[c].x_inrange(endx):
-                speech_bubbles[c].new_max_x(endx)
-    #Add the word to whatever speech bubble it's in
-    speech_bubbles[c].add_phrase(end_y, start_y, w)
+class Reading():
+    def read(run):
+        print("read")
+        
+        image_path = "temp.jpg"
+        reader = easyocr.Reader(['en'], gpu = False) #en = english, there's no gpu (i checked :/)
+        result = reader.readtext(image_path)
+            
+        #([X1,Y1],[xn,y1],[Xn,Yn],[x1,yn], text, confidence)
+        #print(result) #will print the text with array location and confidence values
+        #img = cv2.imread(image_path)
+        speech_bubbles = []
+        c = 0
+        for detection in result: #as long as there's something in the result- so there's text that's being read
+            #grab x's and y's
+            startx = detection[0][0][0]
+            start_y = detection[0][0][1]
+            endx = detection[0][1][0]
+            end_y = detection[0][2][1]    
+            phrase = [startx, start_y, endx, end_y]
+            w = detection[1]
+            #If there's no bubbles, create a new one
+            if len(speech_bubbles) < 1:
+                speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
+            else:
+                c = nearest_bubble(speech_bubbles, phrase)
+                #If the word isn't in the bubble, create a new bubble
+                if c == -1:
+                    speech_bubbles.append(Bubble(startx, start_y, endx, end_y))
+                else:
+                    #Expand the bubble to include new max values
+                    if not speech_bubbles[c].y_inrange(end_y):
+                        speech_bubbles[c].new_max_y(end_y)
+                    if not speech_bubbles[c].x_inrange(endx):
+                        speech_bubbles[c].new_max_x(endx)
+            #Add the word to whatever speech bubble it's in
+            speech_bubbles[c].add_phrase(end_y, start_y, w)
 
-engine = pyttsx3.init()
+        engine = pyttsx3.init()
 
-for i in speech_bubbles:
-     engine.say(i.show_bubble())
-     print(i.show_bubble())
-     engine.runAndWait()
+        for i in speech_bubbles:
+            #engine.say(i.show_bubble())
+            print(i.show_bubble())
+            #engine.runAndWait()'''
+

@@ -12,12 +12,11 @@ from PyQt5.QtWidgets import(
 
 from PyQt5.QtCore import Qt
 
-
-import pyautogui
 from PyQt5.QtWidgets import QWidget, QApplication, QRubberBand
-from PyQt5.QtGui import QCursor, QMouseEvent
+from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtCore import Qt, QPoint, QRect
 import time
+import pyscreenshot as imgGrab
 
 xCord = [] 
 yCord = []
@@ -74,11 +73,11 @@ class Capture(QWidget):
 
             self.main.label.setPixmap(self.imgmap)
             self.main.show()
-            print("cords:", rect.x(), rect.y())
+            print("cords:", rect.x(), rect.y(), rect.width())
             xCord.insert(0, rect.x())
-            xCord.insert(1, rect.width() - rect.x())
+            xCord.insert(1, rect.width() + rect.x())
             yCord.insert(0, rect.y())
-            yCord.insert(1, rect.height() - rect.y())
+            yCord.insert(1, rect.height() + rect.y())
             self.close()
 
 
@@ -103,7 +102,7 @@ class ScreenRegionSelector(QMainWindow):
         self.label = QLabel()
         self.btn_capture = QPushButton("Capture")
         self.btn_capture.clicked.connect(self.capture)
-
+        
         self.btn_save = QPushButton("Save")
         self.btn_save.clicked.connect(self.save)
         self.btn_save.setVisible(False)
@@ -119,34 +118,25 @@ class ScreenRegionSelector(QMainWindow):
         self.capturer.show()
         self.btn_save.setVisible(True)
 
+
     def save(self):
-        file_name, _ = QFileDialog.getSaveFileName(self, "Save Image", "", "Image files (*.png *.jpg *.bmp)")
-        if file_name:
-            self.capturer.imgmap.save(file_name)
+        print("Saved")
+        self.close()
+        #file_name, _ = QFileDialog.getSaveFileName(self, "Save Image", "temp", "Image files (*.jpg *.bmp)")
+        #if file_name:
+        #    self.capturer.imgmap.save(file_name)
 
 
 
-app = QApplication(sys.argv)
-app.setStyleSheet("""
-Qframe {
-background-color: rgb(0,0,0);
-}
-QPushButton {
-border-radius: 5px;
-background-color: rgb(60,90,255)  
-padding: 10px;
-color: white;
-font-weight: bold;
-font-family: Arial;
-font-size: 12px;  
-}
-QPushButton::hover{
-background-color: rgb(60,20,255)              
-}""")
-
-selector = ScreenRegionSelector()
-selector.show()
-app.exit(app.exec_())    
-print("->x",xCord)
-print("->y",yCord)
-
+class Capturing():
+    def getCords(run):
+        app = QApplication(sys.argv)
+        selector = ScreenRegionSelector()
+        selector.show()
+        app.exit(app.exec_())    
+        print("->x",xCord)
+        print("->y",yCord)
+    def screenshot(run):
+        im = imgGrab.grab(bbox=(xCord[0], yCord[0], xCord[1], yCord[1]))
+        im.save('temp.jpg')
+        print("something")
