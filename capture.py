@@ -100,10 +100,10 @@ class ScreenRegionSelector(QMainWindow):
         lay.setContentsMargins(5, 5, 5, 5)
 
         self.label = QLabel()
-        self.btn_capture = QPushButton("Capture")
+        self.btn_capture = QPushButton("Retry")
         self.btn_capture.clicked.connect(self.capture)
         
-        self.btn_save = QPushButton("Save")
+        self.btn_save = QPushButton("Save Coordinates")
         self.btn_save.clicked.connect(self.save)
         self.btn_save.setVisible(False)
 
