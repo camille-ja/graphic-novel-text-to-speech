@@ -1,5 +1,7 @@
+import PIL.Image
 import easyocr
 import pyttsx3
+import random
 
 import cv2
 import PIL
@@ -23,6 +25,14 @@ class Line:
         self.y1 = y
     def set_max_y(self, y):
         self.y2 = y
+    def get_min_x(self):
+        return self.x1
+    def get_min_y(self):
+        return self.y1
+    def get_max_x(self):
+        return self.x2
+    def get_max_y(self):
+        return self.y2
     def getLine(self):
         return (str(self.x1) + ", " + str(self.y1) + ", " + str(self.x2) + ", " + str(self.y2))
 
@@ -93,8 +103,7 @@ class Bubble:
     def combined_height(self, y1, y2):
         word_height = y2 - y1
         self.word_heights += word_height
-   
-   
+   #finds the coordinates for/adds words to the line
     def build_line(self, phrase):
         #each strip should have the same (or rlly close) min and max y values
         #line[minx, miny, maxx, maxy] (y's shouldn't change)
@@ -104,7 +113,7 @@ class Bubble:
         else: 
             expandedLine = False
             for i in self.line:
-            #can edit for room for error- maybe a difference depending on size of the words? 5 is arbitrary for now
+            #can edit for room for error- maybe a difference depending on size of the words? 2 is arbitrary for now
                 #if the phrase fits on the line, expand the lenght of the line
                 if(phrase.get_min_y() >= (i.get_min_y() - 2) and phrase.get_min_y() <= (i.get_min_y() + 2)
                 and phrase.get_max_y() >= (i.get_max_y() - 2) and phrase.get_max_y() <= (i.get_max_y() + 2)):
@@ -114,16 +123,13 @@ class Bubble:
                 self.line.append(Line(phrase.get_min_x(),phrase.get_min_y(),phrase.get_max_x(),phrase.get_max_y()))
             #if the min and max y could fit in the line, change the max x of the line
             #else create a new line
-
+    #prints the line and cords 
     def get_line(self):
         forShow = ""
         for i in self.line:
             forShow += i.getLine()
             forShow += " STRIP "
         return forShow
-   
-
-
     #Adds a phrase to the bubble
     def add_phrase(self, x1,y1, x2, y2, word):
         w = Phrase(word, x1,y1, x2, y2)
@@ -167,7 +173,6 @@ class Bubble:
             return True
         return False
 
-
 #Finds the location of the speech bubble the phrase belongs in. 
 #Returns -1 if the phrase isn't in a currently defined speech bubble
 # bubbles = [startx, start_y, endx, end_y]: List of all exsiting speech bubbles
@@ -179,6 +184,9 @@ def nearest_bubble(bubbles, phrase):
             return c
         c+=1
     return -1
+
+
+
  
 #im = screenreader.get_image()
 class Reading():
@@ -238,25 +246,100 @@ class Reading():
                         speech_bubbles[c].new_x_val(start_x, end_x)
             #Add the word to whatever speech bubble it's in
             speech_bubbles[c].add_phrase(start_x, start_y, end_x, end_y, w)
-        #from each bubble get the phrase like strip and build an array with the cords for each strip
-        '''def re_read(bubbles, self):
-            print("hi")
-            #crop bubbles 
-        engine = pyttsx3.init()
+        Editing.edit(speech_bubbles, reader, im, True)
 
-        re_read(speech_bubbles, self)'''
-        for i in speech_bubbles:
-            #engine.say(i.show_bubble())
+class LetterPoints():
+    def __init__(self, char, points):
+        self.char = []
+        self.char.append(char)
+        self.points = []
+        self.points.append(points)
+    def add_point(self, index):
+        self.points[index] +=1
+    def get_points(self):
+        return self.points
+    def get_let(self):
+        return self.char
+    #adds new char and gives it a point
+    def add_char(self, char):
+        self.points.append(1)
+        self.char.append(char)
+    #returns the letter w the most points corrosponding to it
+    def best_let(self):
+        return self.char[self.points.index(max(self.points))]
+
+
+
+class Editing():
+
+    def edit(speech_bubbles, reader, im, run):
+        vals = [[0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
+                  [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
+                  [0.0, 1],[0.4, 1],[0.8, 1],
+
+                  [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
+                  [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
+                  [0.0, 1],[0.4, 1],[0.8, 1],
+                  
+                  [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
+                  [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
+                  [0.0, 1],[0.4, 1],[0.8, 1],
+                  
+                  [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
+                  [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
+                  [0.0, 1],[0.4, 1],[0.8, 1]] #[contrast threshold, inc/dec, margin,inc/dec,con]
+        for i in speech_bubbles: #goes bubble by bubble (so through entire page)
             print("BUBBLE")
-            print(i.getMin_x())
-            print(i.getMin_y())
-            print(i.getMax_x())
-            print(i.getMax_y())
-            print(i.get_line())
-            #print(i.phrase_cords())
-            #engine.runAndWait()'''
+            for j in i.line: #goes line by line
+                
+                
+                #This is all cropping the bubble line by line
+                #-----------------------------------------------#
+                im1 = im.crop((j.get_min_x() - 5, j.get_min_y() - 2, j.get_max_x() + 5, j.get_max_y() + 2))
+                im1 = im1.save("cropped.jpg")                 
+                #im2 = PIL.Image.open(im1)
+                #im1.show()
+                im1 = PIL.Image.open("cropped.jpg") #temp bc im trying to draw the boudning box 
+                im1.thumbnail((300,300))
+                im1.save("cropped.jpg")
+                '''im1 = im1.point( lambda p: 255 if p > 125 else 0 )
+                im1 = im1.convert('1')
+                im1.save("cropped1.jpg")'''
+                
+                #--------------------------------------------#
+                
+                #This is adjusting variables per bubble
+                words = [] #holds alll of the phrases w versions of adjustments (this is for one line)
+
+                for p in vals: #for each adjustement
+                    result = reader.readtext("cropped.jpg", contrast_ths=p[0], adjust_contrast=.9, width_ths= 1.5, add_margin= p[1], decoder= 'beamsearch') #conttrast thereshold sets minum contrast and adjusts it, adding margins increase bound box in all directions,                # width: if something outside a box is close to something within one it'll merge the two
+                    words.append(result[0][1]) #adding adjustment to the word
+                letters = [] #will hold the letters, points, and indexs for all chars in phrase
+                first_time = True
+
+                for i in words: #per line, goes through every possible variation one at a time
+                    x = 0
+                    while x < len(i): #this will go through each char of one variation
+                        if first_time or len(letters) <= x: #add all chars to the phrase the first time around 
+                            letters.append(LetterPoints(i[x], 1))
+                        else:
+                            if i[x] in letters[x].get_let(): #if the char is in phrase at this specific index
+                                letters[x].add_point(letters[x].get_let().index(i[x])) #add a point to the index that corosponds to the char
+                            else: #if there is no char in this phrase yet
+                                letters[x].add_char(i[x]) #add the char and give it a point
+                        x+=1
+                    first_time = False
+
+                holder = ""
+                for i in letters:
+                    holder+=i.best_let()
+                print(holder)  
+                    
+
+    
         
-      
+        print("done")
+            
        
 
 Reading.read(True)
