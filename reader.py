@@ -7,6 +7,10 @@ import cv2
 import PIL
 from PIL import Image
 from PIL import ImageDraw
+import json
+with open('words_dictionary.json', 'r') as f:
+    # Load the JSON data into a Python dictionary
+    data = json.load(f)
 
 
 class Line:
@@ -258,20 +262,33 @@ class LetterPoints():
         self.points[index] +=1
     def get_points(self):
         return self.points
-    def get_let(self):
+    def get_word(self):
         return self.char
     #adds new char and gives it a point
     def add_char(self, char):
         self.points.append(1)
         self.char.append(char)
     #returns the letter w the most points corrosponding to it
-    def best_let(self):
+    def best_word(self):
         return self.char[self.points.index(max(self.points))]
 
+#adds a word to phrase
+def add_to_phrase(phrase, temp_string, y):
+    if phrase[y] == "":
+        phrase[y] = LetterPoints(temp_string,1)
+    elif temp_string in phrase[y].get_word(): #if the word is in phrase at this specific index or there was no phrase at this index
+        phrase[y].add_point(phrase[y].get_word().index(temp_string)) #add a point to the index that corosponds to the char
+    else: #if there is no char in this phrase yet
+        phrase[y].add_char(temp_string)
 
+def corrected_char(char):
+    if char.isalpha():
+        return char
+    if char == "[":
+        return "i"
+    return char
 
 class Editing():
-
     def edit(speech_bubbles, reader, im, run):
         vals = [[0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
                   [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
@@ -287,7 +304,7 @@ class Editing():
                   
                   [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
                   [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
-                  [0.0, 1],[0.4, 1],[0.8, 1]] #[contrast threshold, inc/dec, margin,inc/dec,con]
+                  [0.0, 1],[0.4, 1],[0.8, 1]] #[contrast threshold, margin]
         for i in speech_bubbles: #goes bubble by bubble (so through entire page)
             print("BUBBLE")
             for j in i.line: #goes line by line
@@ -309,31 +326,58 @@ class Editing():
                 #--------------------------------------------#
                 
                 #This is adjusting variables per bubble
-                words = [] #holds alll of the phrases w versions of adjustments (this is for one line)
+                phrases = [] #holds alll of the phrases w versions of adjustments (this is for one line)
 
                 for p in vals: #for each adjustement
                     result = reader.readtext("cropped.jpg", contrast_ths=p[0], adjust_contrast=.9, width_ths= 1.5, add_margin= p[1], decoder= 'beamsearch') #conttrast thereshold sets minum contrast and adjusts it, adding margins increase bound box in all directions,                # width: if something outside a box is close to something within one it'll merge the two
-                    words.append(result[0][1]) #adding adjustment to the word
-                letters = [] #will hold the letters, points, and indexs for all chars in phrase
+                    if len(result) != 0:
+                        phrases.append(result[0][1]) #adding adjustment to the word
+                words = [] #will hold the letters, points, and indexs for all chars in phrase
                 first_time = True
+                temp = [] #will hold chars to one word 
+                min_words = 0
+                for z in phrases:
+                    print(z)
+                #what if none of the words are there?
+                #what if [/other common errors?
 
-                for i in words: #per line, goes through every possible variation one at a time
+                '''for i in phrases: #per line, goes through every possible variation one at a time
                     x = 0
+                    y = 0
                     while x < len(i): #this will go through each char of one variation
-                        if first_time or len(letters) <= x: #add all chars to the phrase the first time around 
-                            letters.append(LetterPoints(i[x], 1))
-                        else:
-                            if i[x] in letters[x].get_let(): #if the char is in phrase at this specific index
-                                letters[x].add_point(letters[x].get_let().index(i[x])) #add a point to the index that corosponds to the char
-                            else: #if there is no char in this phrase yet
-                                letters[x].add_char(i[x]) #add the char and give it a point
+                        if i[x] != " " and i[x] != "_" and i[x] != ~: #if there's no space, there's a word so add it to temp
+                            temp.append(corrected_char(i[x]))
+                        else: #a space was found, so check if the word exists
+                            min_words+=1 #a new word is here, regardless of if it scanned well
+                            if not not temp: #if the prev to x wasn't a space
+                                temp_string = "".join(temp)
+                            if temp_string.lower() in data: #if the word is in the list of words
+                                temp_string += " "
+                                if first_time or y > min_words:
+                                    words.append(LetterPoints(temp_string, 1))
+                                else:
+                                    add_to_phrase(words, temp_string, y)
+                                y+=1
+                            elif first_time:
+                                words.append("") #filler bc there's no word
+                            temp = [] #will hold chars to one word 
                         x+=1
+                    if not not temp:
+                        temp_string = "".join(temp)
+                        if temp_string.lower() in data:
+                            if first_time or y > min_words:
+                                words.append(LetterPoints(temp_string, 1))
+                            else:
+                                add_to_phrase(words,temp_string,y)
+            
                     first_time = False
+                    temp = []
 
                 holder = ""
-                for i in letters:
-                    holder+=i.best_let()
-                print(holder)  
+                for i in words:
+                    print(i.get_word())
+                    holder+=i.best_word()
+                print(holder)  '''
                     
 
     
