@@ -2,6 +2,9 @@ import PIL.Image
 import easyocr
 import pyttsx3
 import random
+import math
+import os
+
 
 import cv2
 import PIL
@@ -56,9 +59,9 @@ class Phrase:
     def get_y_cords(self):
         return ": miny" +  str(self.y1) + ", maxy:" +  str(self.y2) + ": "
     def get_min_y(self):
-        return self.y1
+        return math.floor(self.y1)
     def get_max_y(self):
-        return self.y2
+        return math.floor(self.y2)
     def get_min_x(self):
         return self.x1
     def get_max_x(self):
@@ -73,7 +76,8 @@ class Bubble:
         self.max_x = max_x
         self.max_y = max_y  
         self.words = []
-        self.word_heights = max_y - min_y
+        self.bubble_heights = max_y - min_y
+        self.word_height = max_y - min_y
         self.size = 1
         self.line = []
     #Returns coordinates
@@ -103,44 +107,32 @@ class Bubble:
     #Sets the bubble's new max y value
     def new_max_y(self, value):
         self.max_y = value
-    #Gets the heights of all phrases
-    def combined_height(self, y1, y2):
-        word_height = y2 - y1
-        self.word_heights += word_height
-   #finds the coordinates for/adds words to the line
-    def build_line(self, phrase):
+   #finds the coordinates for/adds words to the line 
+    def build_line(self, phrase, min_x):
         #each strip should have the same (or rlly close) min and max y values
         #line[minx, miny, maxx, maxy] (y's shouldn't change)
-        #if line is empty, add strip to line an
+        #if line is empty, add strip to line
         if(len(self.line) == 0):
             self.line.append(Line(phrase.get_min_x(),phrase.get_min_y(),phrase.get_max_x(),phrase.get_max_y()))
+            #print(phrase.get_phrase())
         else: 
             expandedLine = False
             for i in self.line:
             #can edit for room for error- maybe a difference depending on size of the words? 2 is arbitrary for now
-                #if the phrase fits on the line, expand the lenght of the line
+                #if the phrase fits on the line, expand the length of the line
                 if(phrase.get_min_y() >= (i.get_min_y() - 2) and phrase.get_min_y() <= (i.get_min_y() + 2)
                 and phrase.get_max_y() >= (i.get_max_y() - 2) and phrase.get_max_y() <= (i.get_max_y() + 2)):
                     i.set_max_x(phrase.get_max_x())
                     expandedLine = True
-            if(not expandedLine):
-                self.line.append(Line(phrase.get_min_x(),phrase.get_min_y(),phrase.get_max_x(),phrase.get_max_y()))
-            #if the min and max y could fit in the line, change the max x of the line
-            #else create a new line
+            if(not expandedLine):      #else create a new line
+                self.line.append(Line(min_x,phrase.get_min_y(),phrase.get_max_x(),phrase.get_max_y()))
     #prints the line and cords 
     def get_line(self):
         forShow = ""
         for i in self.line:
             forShow += i.getLine()
-            forShow += " STRIP "
+            forShow += "<- STRIP "
         return forShow
-    #Adds a phrase to the bubble
-    def add_phrase(self, x1,y1, x2, y2, word):
-        w = Phrase(word, x1,y1, x2, y2)
-        self.words.append(w)
-        self.size +=1
-        self.combined_height(y1, y2)
-        self.build_line(w)
     #returns the y value of each phrase in the bubble
     def phrase_cords(self):
         holder = ""
@@ -159,21 +151,33 @@ class Bubble:
             return True
         return False
     #Returns true if x cord is in the speech bubble
-    def x_inrange(self, x1, x2):
-        #print(str(self.max_x) + ", " + str(self.min_x) + ", " + str(x1) + ", " + str(x2))
+    def x_inrange(self, x1, x2): #starx,endx
         if x2 <= self.max_x and x1 >= self.min_x:
             return True
         return False
+    #the size of the bubble is increased by the height of the newest phrase
+    def combined_height(self, y1, y2):
+        word_height = y2 - y1
+        self.bubble_heights += word_height #bubble is increase by the height of the phrase that's been added
+    #Adds a phrase to the bubble
+    def add_phrase(self, x1,y1, x2, y2, word, min):
+        w = Phrase(word, x1,y1, x2, y2)
+        self.words.append(w)
+        self.size +=1
+        self.combined_height(y1, y2)
+        self.build_line(w, min)
     #Returns true if x cord is inside or reasonably spaced from speech bubble
-    def x_spaced(self, xval):
-        length = self.word_heights / self.size
-        if xval <= length + self.max_x:
+    def x_spaced(self, xval, min_y, max_y):
+        smaller_height = max_y - min_y
+        if self.word_height < smaller_height: #this is to account for big text in a bubble followed by small text or vis versa
+            smaller_height = self.word_height
+        if xval <= smaller_height + self.max_x: #if min x of checked value is less than max x of bubble + length of a word, it's in bubble
             return True
         return False
     #Returns true if y cord is inside or reasonably spaced from speech bubble
     def y_spaced(self, yval):
-        length = self.word_heights / self.size
-        if yval <= length + self.max_y:
+        length = self.bubble_heights / self.size
+        if yval <= self.word_height + self.max_y: #if the word starts before the max y of the bubble (plus room for an additional word, it's resonably spaced)
             return True
         return False
 
@@ -181,76 +185,70 @@ class Bubble:
 #Returns -1 if the phrase isn't in a currently defined speech bubble
 # bubbles = [startx, start_y, endx, end_y]: List of all exsiting speech bubbles
 # phrase = [startx, start_y, endx, end_y]: Phrase or phrase being checked
-def nearest_bubble(bubbles, phrase):
+def nearest_bubble(bubbles, phrase, w):
     c = 0
     for cords in bubbles:
-        if cords.x_spaced(phrase[0]) and cords.y_spaced(phrase[1]):
+        if cords.x_spaced(phrase[0], phrase[1], phrase[2]) and cords.y_spaced(phrase[1]):
             return c
         c+=1
     return -1
-
-
 
  
 #im = screenreader.get_image()
 class Reading():
     def read(run):
-        print("read")
-        
-        #editing image
-        img = cv2.imread("temp.jpg",0)
-        blur = cv2.GaussianBlur(img,(5,5),0)
-        pil = Image.fromarray(blur)
-        pil.save("look.jpg")
-        
-        image_path = "temp.jpg"
-        im = PIL.Image.open("temp.jpg") #temp bc im trying to draw the boudning box 
-        im
         reader = easyocr.Reader(['en'], gpu = False) #en = english, there's no gpu (i checked :/)
-        result = reader.readtext(im) #no changes
-        #conttrast thereshold sets minum contrast and adjusts it, adding margins increase bound box in all directions, width: if something outside a box is close to something within one it'll merge the two
-        #result = reader.readtext(im, contrast_ths=0.05, adjust_contrast=0.9, width_ths= 1.5, add_margin=.25, decoder= 'beamsearch')
-        #doing a ycenter_ths of like 5 will give the indivudal speech bubbles
-        result
-        ''' draw = ImageDraw.Draw(im)
-        for results in result:
-            p0, p1, p2, p3 = results[0]
-            draw.line([*p0,*p1,*p2,*p3,*p0], fill = 'yellow', width = 2)
-        im.show()'''
-        
-       # print(result)
+        print("read")
+        to_read = []
+
+        #editing image
+        #img = cv2.imread("temp.jpg",0)
+        folder_path = 'C:/Users/cjam2/graphic novel text to speech/panels/panels'
+        for filename in os.listdir(folder_path):
+            image_path = os.path.join(folder_path, filename)
+            im = PIL.Image.open(image_path)
+            result = reader.readtext(im) #no changes
+            #print(result)
+            speech_bubbles = []
+            c = 0
+            prev_x = 0
+            prev_y = 0
+            for detection in result: #as long as there's something in the result- so there's text that's being read
+                #grab x's and y's
+                #startx/y = x1, endx/y = x2 (l-r, top-bottom)
+                start_x = detection[0][0][0]
+                start_y = detection[0][0][1]
+                end_x = detection[0][1][0]
+                end_y = detection[0][2][1]    
+                phrase = [start_x, start_y, end_x, end_y]
+                #w = word/phrase
+                w = detection[1]
+                if start_x >= prev_x or start_y >= prev_y: #if the phrase is to the right or under the prev phrase, add it
+                    #If there's no bubbles, create a new one
+                    if len(speech_bubbles) < 1:
+                        speech_bubbles.append(Bubble(start_x, start_y, end_x, end_y))
+                    else:    
+                        c = nearest_bubble(speech_bubbles, phrase, w)
+                        #If the word isn't in the bubble, create a new bubble
+                        if c == -1:
+                            speech_bubbles.append(Bubble(start_x, start_y, end_x, end_y))
+                        else:
+                            #Expand the bubble to include new max values
+                            if not speech_bubbles[c].y_inrange(end_y):
+                                speech_bubbles[c].new_max_y(end_y)
+                            if not speech_bubbles[c].x_inrange(start_x, end_x):
+                                speech_bubbles[c].new_x_val(start_x, end_x)
+                        #Add the word to whatever speech bubble it's in
+                    prev_x = start_x
+                    prev_y = start_y
+                    speech_bubbles[c].add_phrase(start_x, start_y, end_x, end_y, w, speech_bubbles[c].getMin_x())                    
+            print("done read, edit time!")
+            to_read.append(Editing.edit(speech_bubbles, reader, im, True))
+            to_read.append(" ")
+        for s in to_read:
+            print(s)
             
-        #([X1,Y1],[xn,y1],[Xn,Yn],[x1,yn], text, confidence)
-        #print(result) #will print the text with array location and confidence values
-        speech_bubbles = []
-        c = 0
-        for detection in result: #as long as there's something in the result- so there's text that's being read
-            #grab x's and y's
-            #startx/y = x1, endx/y = x2 (l-r, top-bottom)
-            start_x = detection[0][0][0]
-            start_y = detection[0][0][1]
-            end_x = detection[0][1][0]
-            end_y = detection[0][2][1]    
-            phrase = [start_x, start_y, end_x, end_y]
-            #w = word/phrase
-            w = detection[1]
-            #If there's no bubbles, create a new one
-            if len(speech_bubbles) < 1:
-                speech_bubbles.append(Bubble(start_x, start_y, end_x, end_y))
-            else:
-                c = nearest_bubble(speech_bubbles, phrase)
-                #If the word isn't in the bubble, create a new bubble
-                if c == -1:
-                    speech_bubbles.append(Bubble(start_x, start_y, end_x, end_y))
-                else:
-                    #Expand the bubble to include new max values
-                    if not speech_bubbles[c].y_inrange(end_y):
-                        speech_bubbles[c].new_max_y(end_y)
-                    if not speech_bubbles[c].x_inrange(start_x, end_x):
-                        speech_bubbles[c].new_x_val(start_x, end_x)
-            #Add the word to whatever speech bubble it's in
-            speech_bubbles[c].add_phrase(start_x, start_y, end_x, end_y, w)
-        Editing.edit(speech_bubbles, reader, im, True)
+        
 
 class LetterPoints():
     def __init__(self, char, points):
@@ -264,8 +262,8 @@ class LetterPoints():
         return self.points
     def get_word(self):
         return self.char
-    #adds new char and gives it a point
-    def add_char(self, char):
+    #adds new word and gives it a point
+    def add_word(self, char):
         self.points.append(1)
         self.char.append(char)
     #returns the letter w the most points corrosponding to it
@@ -273,24 +271,34 @@ class LetterPoints():
         return self.char[self.points.index(max(self.points))]
 
 #adds a word to phrase
-def add_to_phrase(phrase, temp_string, y):
-    if phrase[y] == "":
-        phrase[y] = LetterPoints(temp_string,1)
-    elif temp_string in phrase[y].get_word(): #if the word is in phrase at this specific index or there was no phrase at this index
-        phrase[y].add_point(phrase[y].get_word().index(temp_string)) #add a point to the index that corosponds to the char
-    else: #if there is no char in this phrase yet
-        phrase[y].add_char(temp_string)
+#words is the array that holds all the words scanned so far
+#temp_string is the word we're adding with a space at the end
+#y is the specific index (so the specific word) we're looking at
+def add_to_phrase(words, temp_string, y, delete):
+    if words[y] == "XX": #if a real word hasn't been added to words[], add it here
+        words[y] = LetterPoints(temp_string,1)
+    elif temp_string in words[y].get_word(): #if the word is already found at the index, add a point to the word
+        words[y].add_point(words[y].get_word().index(temp_string)) #add a point to the index that corosponds to the word
+    else: #if temp_string is a new word at the index, add temp_string and give the word 1 point (im like so sure this isn't nesicary)
+        #print(words[y].get_word())
+        words[y].add_word(temp_string)
+        '''print("ADDING",temp_string)
+        print(y, delete) #delete is min words
+        u = 0
+        while u < len(words):
+            if words[u] == "XX":
+                print("XX")
+            else:
+                print(words[u].get_word())
+            u+=1'''
+        
+def word_correction(words, junk_words, temp_string, separated_char, y, max_word_index):
+    print("f")
 
-def corrected_char(char):
-    if char.isalpha():
-        return char
-    if char == "[":
-        return "i"
-    return char
 
 class Editing():
     def edit(speech_bubbles, reader, im, run):
-        vals = [[0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
+        vals = [ [0,0], [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
                   [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
                   [0.0, 1],[0.4, 1],[0.8, 1],
 
@@ -305,8 +313,12 @@ class Editing():
                   [0.0, 0.1],[0.4, 0.1],[0.8, 0.1],
                   [0.0, 0.5],[0.4, 0.5],[0.8, 0.5],
                   [0.0, 1],[0.4, 1],[0.8, 1]] #[contrast threshold, margin]
+        holder = ""
         for i in speech_bubbles: #goes bubble by bubble (so through entire page)
+            '''print(i.show_bubble())
             print("BUBBLE")
+            print("NUM LINES: ",len(i.line))'''
+
             for j in i.line: #goes line by line
                 
                 
@@ -314,15 +326,9 @@ class Editing():
                 #-----------------------------------------------#
                 im1 = im.crop((j.get_min_x() - 5, j.get_min_y() - 2, j.get_max_x() + 5, j.get_max_y() + 2))
                 im1 = im1.save("cropped.jpg")                 
-                #im2 = PIL.Image.open(im1)
-                #im1.show()
                 im1 = PIL.Image.open("cropped.jpg") #temp bc im trying to draw the boudning box 
                 im1.thumbnail((300,300))
                 im1.save("cropped.jpg")
-                '''im1 = im1.point( lambda p: 255 if p > 125 else 0 )
-                im1 = im1.convert('1')
-                im1.save("cropped1.jpg")'''
-                
                 #--------------------------------------------#
                 
                 #This is adjusting variables per bubble
@@ -335,54 +341,98 @@ class Editing():
                 words = [] #will hold the letters, points, and indexs for all chars in phrase
                 first_time = True
                 temp = [] #will hold chars to one word 
-                min_words = 0
+                junk_words = [] #same length as words[]- indexs with YY have valid words
+                max_word_index = -1
+                single_lets = ['a', 'i'] #letters that can reasonbly be by themselves
                 for z in phrases:
                     print(z)
                 #what if none of the words are there?
                 #what if [/other common errors?
 
-                '''for i in phrases: #per line, goes through every possible variation one at a time
-                    x = 0
-                    y = 0
+                for i in phrases: #per line, goes through every possible variation one at a time
+                    x = 0 #the index of i
+                    y = 0 #the index of words[] and junk_words[]
+                    #print("NEW:", i)
+                    #print("----------NEW LOOP-------------")
+                    i += " " #so the last word gets picked up
                     while x < len(i): #this will go through each char of one variation
-                        if i[x] != " " and i[x] != "_" and i[x] != ~: #if there's no space, there's a word so add it to temp
-                            temp.append(corrected_char(i[x]))
+                        if i[x].isalnum(): #if the char is a letter or number, add it to the list
+                            temp.append(i[x]) 
+                        #    print(i[x])
                         else: #a space was found, so check if the word exists
-                            min_words+=1 #a new word is here, regardless of if it scanned well
-                            if not not temp: #if the prev to x wasn't a space
-                                temp_string = "".join(temp)
-                            if temp_string.lower() in data: #if the word is in the list of words
-                                temp_string += " "
-                                if first_time or y > min_words:
-                                    words.append(LetterPoints(temp_string, 1))
-                                else:
-                                    add_to_phrase(words, temp_string, y)
-                                y+=1
-                            elif first_time:
-                                words.append("") #filler bc there's no word
-                            temp = [] #will hold chars to one word 
+                            #print(temp)
+                            if not not temp: #if the prev to x wasn't a space 
+                                if (len(temp) > 1 or temp[0] in single_lets):# and x + 1 < len(i) -1: #if there's just a single character at the end that isn't i, or a it's probably a mistake
+                                    temp_string = "".join(temp)
+                                    temp_string = temp_string.lower()
+                                    t = "," + temp_string + "," #to make things match the json file
+                                    #print(t, x < len(i))
+                                    temp_string += " " #adding a space to separate the words
+                                    #-------deciding what to do with the scanned word----------------------#      
+                                    if t in data: #if the word is in the list of words
+                                        if first_time or y > max_word_index: #if we're adding a word at an index not prev accessed
+                                            words.append(LetterPoints(temp_string, 1))
+                                            junk_words.append("YY")
+                                            max_word_index+=1
+                                            #print(first_time)
+                                        else: #word is in list and is being added to an index that's filled with words or XX
+                                            #print("Y ",y,"words: ",len(words), max_word_index)
+                                            
+                                            add_to_phrase(words, temp_string, y, max_word_index)
+                                    else: #did not scan a word
+                                        if first_time: #word isn't in list but it's the first time we're adding to the list
+                                            words.append("XX") #filler bc there's no word 
+                                            junk_words.append("YY")
+                                            max_word_index+=1
+                                        else: 
+                                            if y > max_word_index:
+                                                words.append("XX")
+                                                junk_words.append("YY")
+                                                max_word_index+=1
+                                            else: #word isn't in list and this isn't the first time we're adding to list (so something should be in words[y])- we're adding what's scanned to junk
+                                                #print(max_word_index, y, temp_string)
+                                                #for w in words:
+                                                #    if w == "XX":
+                                                #        print(w)
+                                                #    else:
+                                                        #print(w.get_word())
+                                                if junk_words[y] == "YY":
+                                                    junk_words[y] = (LetterPoints(temp_string,1)) #replacing the filler with the scanned word (not in list)
+                                                if temp_string in junk_words[y].get_word(): #if the word is alr in junk string, give it a point
+                                                    junk_words[y].add_point(junk_words[y].get_word().index(temp_string)) 
+                                                else: #there's already a junk word, but it doesn't match anything in junk_words
+                                                    junk_words[y].add_word(temp_string)
+                                    y+=1
+                                    temp = [] #will hold chars to one word 
+                            #else:
+                                #print("END MISTAKE", len(temp), x, len(i), )
+                                #for w in temp:
+                                #    print(w)
+                        #print(y, ":", i, ":" ,i[x], x, len(i))
                         x+=1
-                    if not not temp:
-                        temp_string = "".join(temp)
-                        if temp_string.lower() in data:
-                            if first_time or y > min_words:
-                                words.append(LetterPoints(temp_string, 1))
-                            else:
-                                add_to_phrase(words,temp_string,y)
-            
                     first_time = False
                     temp = []
 
-                holder = ""
-                for i in words:
-                    print(i.get_word())
-                    holder+=i.best_word()
-                print(holder)  '''
+
+
+                c = 0
+                while c < len(words):
+                    if words[c] == "XX": #there's a junk word that should be used instead
+                        w = junk_words[c].best_word()
+                        if w != "YY":
+                            #print(junk_words[c].best_word())
+                            holder+= junk_words[c].best_word()
+                    else:
+                        holder += words[c].best_word()
+                    c+=1
+                print(holder)  
+                holder += " "
                     
 
     
         
         print("done")
+        return holder
             
        
 

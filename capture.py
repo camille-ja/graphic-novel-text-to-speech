@@ -138,5 +138,5 @@ class Capturing():
         print("->y",yCord)
     def screenshot(run):
         im = imgGrab.grab(bbox=(xCord[0], yCord[0], xCord[1], yCord[1]))
-        im.save('temp.jpg')
+        im.save('C:/Users/cjam2/graphic novel text to speech/screenshot/temp.jpg')
         print("something")
