@@ -100,7 +100,7 @@ class ScreenRegionSelector(QMainWindow):
         lay.setContentsMargins(5, 5, 5, 5)
 
         self.label = QLabel()
-        self.btn_capture = QPushButton("Retry")
+        self.btn_capture = QPushButton("Capture")
         self.btn_capture.clicked.connect(self.capture)
         
         self.btn_save = QPushButton("Save Coordinates")
@@ -138,5 +138,5 @@ class Capturing():
         print("->y",yCord)
     def screenshot(run):
         im = imgGrab.grab(bbox=(xCord[0], yCord[0], xCord[1], yCord[1]))
-        im.save('C:/Users/cjam2/graphic novel text to speech/screenshot/temp.jpg')
+        im.save('temp.jpg')
         print("something")

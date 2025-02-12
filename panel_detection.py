@@ -16,20 +16,20 @@ from skimage.measure import regionprops
 
 class Slice():
     def split_panels():
-        root = Tk()
-        root.lift()
-        root.withdraw()
+        #root = Tk()
+        #root.lift()
+        #root.withdraw()
         # now this code copied from tutorial blog Max Halford
             #https://maxhalford.github.io/blog/comic-book-panel-segmentation/
 
         #path = askdirectory(title='Select Folder containing jpg image') # shows dialog box and return the path
         #if path == "" : sys.exit(0)
-        path_of_the_directory = "C:/Users/cjam2/graphic novel text to speech/screenshot"
+        path_of_the_directory = "path" 
 
         #answer = messagebox.askyesno("Question!","Show preview page before panels?")
         #initd= os.path.dirname(path)
-        pathd = "C:/Users/cjam2/graphic novel text to speech/panels"
-        if pathd == "" : sys.exit(0)
+        pathd = "path/panels"
+        #if pathd == "" : sys.exit(0)
         t = 1000
         os.makedirs(pathd+'/panels',exist_ok=True)
 
@@ -111,7 +111,6 @@ class Slice():
                             swap = panels[i]
                             panels[i]=panels[j]
                             panels[j]=swap
-
                         else:
                             if panels[i][0] <= panels[j][0] :
                                 swap = panels[i]
@@ -122,8 +121,6 @@ class Slice():
             #swap "double height panels"
             i=len(panels)-2
             for j in enumerate(panels):
-
-
                 if i >= 0:
                     #print (panels[i])
                     #print (panels[i+1])
@@ -132,9 +129,6 @@ class Slice():
                             swap = panels[i]
                             panels[i]=panels[i+1]
                             panels[i+1]=swap
-
-
-
                 i = i-1
             # save panels in "panels" sub-folder
             for i, bbox in enumerate(panels, start=1):
