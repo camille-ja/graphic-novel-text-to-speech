@@ -29,6 +29,6 @@ def main():
             Reading.read(runningReader)
             runningReader = False
     print("done")
-    
+
 if __name__ == "__main__":
     main()

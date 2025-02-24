@@ -1,4 +1,5 @@
 import sys
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import(
     QApplication,
     QMainWindow,
@@ -7,6 +8,8 @@ from PyQt5.QtWidgets import(
     QFrame,
     QPushButton,
     QFileDialog,
+    QLineEdit,
+    QGridLayout,
     QWidget
 )
 
@@ -87,11 +90,16 @@ class ScreenRegionSelector(QMainWindow):
     
     def __init__(self,):
         super().__init__(None)
+        self.m_width = 600
+        self.m_height = 700
 
-        self.m_width = 400
-        self.m_height = 500
 
         self.setMinimumSize(self.m_width, self.m_height)
+        font = self.font()
+        font.setPointSize(14)
+
+
+
 
         frame = QFrame()
         frame.setContentsMargins(0, 0, 0, 0)
@@ -99,17 +107,22 @@ class ScreenRegionSelector(QMainWindow):
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.setContentsMargins(5, 5, 5, 5)
 
+
+
         self.label = QLabel()
         self.btn_capture = QPushButton("Capture")
+        self.btn_capture.setFont(font)
         self.btn_capture.clicked.connect(self.capture)
-        
+       
         self.btn_save = QPushButton("Save Coordinates")
         self.btn_save.clicked.connect(self.save)
         self.btn_save.setVisible(False)
 
+
         lay.addWidget(self.label)
         lay.addWidget(self.btn_capture)
         lay.addWidget(self.btn_save)
+
 
         self.setCentralWidget(frame)
 
@@ -126,9 +139,74 @@ class ScreenRegionSelector(QMainWindow):
         #if file_name:
         #    self.capturer.imgmap.save(file_name)
 
+class MainMenu(QMainWindow):
+    def __init__(self):
+        super(MainMenu, self).__init__()
+
+
+        self.m_width = 600
+        self.m_height = 700
+        self.setMinimumSize(self.m_width, self.m_height)
+
+
+        font = self.font()
+        font.setPointSize(14)
+
+
+        bigFont = self.font()
+        bigFont.setPointSize(30)
+
+
+        frame = QFrame()
+        frame.setContentsMargins(0, 0, 0, 0)
+        lay = QGridLayout()
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.setContentsMargins(40, 5, 500, 5) #
+
+
+        self.label = QLabel()
+        self.btn_capture = QPushButton("Capture")
+        self.btn_capture.setFont(font)
+        self.btn_capture.clicked.connect(self.capture)
+
+        self.bigText = QtWidgets.QLabel(self)
+        self.bigText = QtWidgets.QLabel(self)
+        self.bigText.setText("Hello!")
+        self.bigText.move(30,30)
+        self.bigText.setFont(bigFont)
+
+        self.b1 = QtWidgets.QPushButton(self)
+        self.b1.setText("Capture")
+        self.b1.setFont(font)
+        self.b1.move(30,500)
+        self.b1.setFixedSize(200,100)
+        self.b1.clicked.connect(self.capture) 
+
+        #self.btn_info.setFont(font)
+
+
+        lay.addWidget(self.btn_capture)
+
+
+        #lay.addWidget(self.btn_info)
+        self.bigText.adjustSize()
+        wid = QtWidgets.QWidget(self)
+
+        wid.setLayout(lay)
+        self.show()
+
+    def capture(self):
+        self.capturer = Capture(self) #grabs the mouse movement from capture class
+        self.capturer.show()
+
 
 
 class Capturing():
+    def showMain(run):
+        app = QApplication(sys.argv)
+        menu = MainMenu()
+        menu.show()
+        app.exit(app.exec_())    
     def getCords(run):
         app = QApplication(sys.argv)
         selector = ScreenRegionSelector()
@@ -138,5 +216,6 @@ class Capturing():
         print("->y",yCord)
     def screenshot(run):
         im = imgGrab.grab(bbox=(xCord[0], yCord[0], xCord[1], yCord[1]))
-        im.save('temp.jpg')
         print("something")
+
+Capturing.showMain(True)

@@ -226,7 +226,7 @@ class Bubble:
         return False
     def insertInOrder(self, entry, end):
         i = end
-        while(i >= 0 and entry.get_max_y() < self.words[i].get_max_y()):
+        while(i >= 0 and entry.get_max_y() < self.words[i].get_max_y() and entry.get_min_x() < self.words[i].get_min_x()):
             temp = self.words[i + 1]
             self.words[i + 1] = self.words[i]
             self.words[i] = temp
@@ -239,6 +239,11 @@ class Bubble:
             nextToInsert = self.words[u]
             self.insertInOrder(nextToInsert, u-1)
             u+=1
+        holder = ""
+        for j in self.words:
+            holder += j.get_phrase()
+            holder += " "
+        return holder
         
 
 #Finds the location of the speech bubble the phrase belongs in. 
@@ -265,10 +270,12 @@ class Reading():
 
         #editing image
         #img = cv2.imread("temp.jpg",0)
+        #for filename in os.listdir(folder_path):
         b = 0
         while b < 1:
             b+=1
-            im = PIL.Image.open("temp.jpg") #image_path
+            #image_path = os.path.join(folder_path, filename) #filename
+            im = PIL.Image.open("bad.jpg") #image_path
             result = reader.readtext(im) #no changes
             print(result)
             speech_bubbles = []
@@ -311,27 +318,23 @@ class Reading():
             for z in speech_bubbles:
                 print("BUBBLE", z.__repr__())
             conf_level /= t
-            print(conf_level)
-            if(conf_level < .7):
-                to_read = []
-                for bubble in speech_bubbles:
-                    bubble.sort_phrases()
+            to_read = []
+            for bubble in speech_bubbles:
+                to_read.append(bubble.sort_phrases())
+                if(conf_level < .7):
                     for phrase in bubble.words:
                         #print(phrase.get_phrase())
                         bubble.build_line(phrase)
                     #    print(phrase.get_phrase())
-                    print("------------------------")
+                print("------------------------")
+            if(conf_level < .7):
                 to_read.append(Editing.edit(speech_bubbles, reader, im, True))
-            to_read.append(" ")
-        #print("new")
-        #print(to_read)
+
         print("-----FINAL-----")
         for s in to_read:
             print(s)
-            engine.say(s)
-            engine.runAndWait()
-
-            
+            #engine.say(s)
+            #engine.runAndWait()
         
 
 class LetterPoints():
@@ -441,9 +444,9 @@ class Editing():
             #print(len(speech_bubbles)
             print(i.show_cords())
 
-            #im1 = im.crop((i.getMin_x() - 5, i.getMin_y() -2 , i.getMax_x() + 5, i.getMax_y() + 2))
-            #im1.save("cropped.jpg")
-            #time.sleep(3)
+            im1 = im.crop((i.getMin_x() - 5, i.getMin_y() -2 , i.getMax_x() + 5, i.getMax_y() + 2))
+            im1.save("cropped.jpg")
+            time.sleep(3)
 
             for j in i.line: #goes line by line                
                 #This is all cropping the bubble line by line
@@ -516,7 +519,7 @@ class Editing():
                 #print(temp)
                 print(holder)  
                 #time.sleep(2)
-                #holder += " "
+                #holder += " "'''
                
 
     
@@ -526,4 +529,4 @@ class Editing():
             
        
 
-#Reading.read(True)
+Reading.read(True)

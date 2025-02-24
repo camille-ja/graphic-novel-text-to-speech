@@ -24,11 +24,9 @@ class Slice():
 
         #path = askdirectory(title='Select Folder containing jpg image') # shows dialog box and return the path
         #if path == "" : sys.exit(0)
-        path_of_the_directory = "path" 
 
         #answer = messagebox.askyesno("Question!","Show preview page before panels?")
         #initd= os.path.dirname(path)
-        pathd = "path/panels"
         #if pathd == "" : sys.exit(0)
         t = 1000
         os.makedirs(pathd+'/panels',exist_ok=True)
@@ -154,4 +152,4 @@ class Slice():
                 f.write(img2pdf.convert(images))'''
 
         #if pdfinp == 1 : shutil.rmtree(path)
-Slice.split_panels()
+#Slice.split_panels()
